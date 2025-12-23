@@ -1,0 +1,1010 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+    <title>Soumyajit Hazra</title>
+    <!-- Favicon -->
+    <link rel="icon" href="logo.jpeg" type="image/jpeg">
+    
+    <!-- Tailwind CSS (Utility classes) -->
+    <script src="https://cdn.tailwindcss.com"></script>
+    <!-- FontAwesome (Icons) -->
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+
+    <!-- ======================================================================= -->
+    <!--                          CSS SECTION (style.css)                        -->
+    <!-- ======================================================================= -->
+    <style>
+        /* Apple San Francisco & Mono Fonts */
+        @import url('https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600&display=swap');
+
+        :root {
+            /* Glassmorphism Variables */
+            --bg-glass: rgba(28, 28, 30, 0.75); /* Slightly darker for better contrast with neural bg */
+            --bg-glass-border: rgba(255, 255, 255, 0.15);
+            --text-primary: #f5f5f7;
+            --text-secondary: #86868b;
+            
+            /* Syntax Highlighting Colors */
+            --accent-green: #32d74b;
+            --accent-blue: #0a84ff;
+            --accent-cyan: #64d2ff;
+            --accent-purple: #bf5af2;
+            --accent-yellow: #ffd60a;
+            --accent-red: #ff453a;
+        }
+
+        body {
+            margin: 0;
+            overflow: hidden;
+            /* Dark Gradient Background for Neural Network */
+            background: linear-gradient(to bottom, #0f0c29, #302b63, #24243e); 
+            font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif;
+            height: 100vh;
+            width: 100vw;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            user-select: none;
+            position: relative;
+        }
+
+        /* Neural Network Canvas (Background) */
+        #neural-canvas {
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            z-index: 0; /* Behind everything */
+            pointer-events: none; /* Allow clicks to pass through */
+        }
+
+        /* Unified Glassmorphism Window */
+        #terminal-window {
+            width: 95%; /* Mobile first width */
+            max-width: 900px; /* Desktop limit */
+            height: 80vh; /* Mobile first height */
+            max-height: 650px; /* Desktop limit */
+            background-color: var(--bg-glass);
+            backdrop-filter: blur(25px) saturate(180%);
+            -webkit-backdrop-filter: blur(25px) saturate(180%);
+            border-radius: 14px;
+            box-shadow: 
+                0 20px 40px rgba(0, 0, 0, 0.6),
+                0 0 0 1px var(--bg-glass-border) inset;
+            display: flex;
+            flex-direction: column;
+            position: absolute;
+            transition: all 0.5s cubic-bezier(0.19, 1, 0.22, 1);
+            transform-origin: bottom center;
+            overflow: hidden;
+            z-index: 10;
+        }
+
+        /* Maximize State */
+        #terminal-window.maximized {
+            width: 100% !important;
+            height: 100% !important;
+            max-width: none !important;
+            max-height: none !important;
+            top: 0 !important;
+            left: 0 !important;
+            border-radius: 0;
+            transform: none !important;
+        }
+
+        /* Hidden/Closed State */
+        #terminal-window.closed {
+            opacity: 0;
+            pointer-events: none;
+            transform: scale(0.95);
+            filter: blur(10px);
+        }
+
+        /* Genie Effect - Minimized State */
+        #terminal-window.minimized {
+            transform: translate(0, 100vh) scale(0.1) skewX(20deg);
+            opacity: 0;
+            border-radius: 100px;
+            filter: blur(5px);
+        }
+
+        /* Unified Title Bar */
+        .title-bar {
+            height: 44px;
+            min-height: 44px;
+            display: flex;
+            align-items: center;
+            padding: 0 16px;
+            border-bottom: 1px solid rgba(255, 255, 255, 0.05);
+            cursor: default;
+            position: relative;
+        }
+
+        .buttons {
+            display: flex;
+            gap: 8px;
+            z-index: 10;
+        }
+
+        .button {
+            width: 12px;
+            height: 12px;
+            border-radius: 50%;
+            position: relative;
+            cursor: pointer;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            transition: transform 0.1s;
+        }
+        
+        .button:active { transform: scale(0.9); }
+
+        .red { background-color: #ff5f57; border: 0.5px solid rgba(0,0,0,0.1); }
+        .yellow { background-color: #febc2e; border: 0.5px solid rgba(0,0,0,0.1); }
+        .green { background-color: #28c840; border: 0.5px solid rgba(0,0,0,0.1); }
+
+        .button i {
+            font-size: 7px;
+            opacity: 0;
+            color: rgba(0,0,0,0.5);
+            font-weight: 900;
+            transition: opacity 0.2s;
+        }
+        .buttons:hover .button i { opacity: 1; }
+
+        .title {
+            position: absolute;
+            left: 0;
+            right: 0;
+            text-align: center;
+            font-size: 13px;
+            color: rgba(255, 255, 255, 0.6);
+            font-weight: 500;
+            pointer-events: none;
+        }
+
+        .title i { margin-right: 6px; opacity: 0.7; }
+
+        /* Terminal Content */
+        .terminal-body {
+            flex-grow: 1;
+            padding: 16px 20px;
+            overflow-y: auto;
+            font-family: 'SF Mono', 'Menlo', 'Monaco', 'Courier New', monospace;
+            color: var(--text-primary);
+            font-size: 13.5px;
+            line-height: 1.5;
+            scrollbar-width: thin;
+            scrollbar-color: rgba(255,255,255,0.2) transparent;
+            text-shadow: 0 0 1px rgba(0,0,0,0.1);
+            -webkit-overflow-scrolling: touch; /* Smooth scrolling on iOS */
+        }
+
+        .terminal-body::-webkit-scrollbar { width: 6px; }
+        .terminal-body::-webkit-scrollbar-track { background: transparent; }
+        .terminal-body::-webkit-scrollbar-thumb {
+            background-color: rgba(255,255,255,0.2);
+            border-radius: 10px;
+        }
+
+        /* Command Line Styles */
+        .command-line { margin-bottom: 12px; }
+        .prompt { color: var(--accent-green); font-weight: 600; }
+        .path { color: var(--accent-blue); font-weight: 600; }
+        .command { color: var(--text-primary); }
+
+        /* Output Hierarchy */
+        .section-title {
+            color: var(--accent-purple);
+            font-weight: 700;
+            margin-top: 24px;
+            margin-bottom: 8px;
+            text-transform: uppercase;
+            letter-spacing: 0.5px;
+            display: inline-block;
+            border-bottom: 1px solid rgba(191, 90, 242, 0.3);
+            padding-bottom: 2px;
+        }
+
+        .item-title { color: var(--accent-cyan); font-weight: 600; }
+        .item-subtitle { color: var(--accent-yellow); font-style: italic; font-size: 0.95em; opacity: 0.9; }
+        
+        .bullet-point {
+            display: flex;
+            margin-left: 8px;
+            color: var(--text-secondary);
+        }
+        .bullet-point::before {
+            content: "›";
+            color: var(--accent-red);
+            margin-right: 8px;
+            font-weight: bold;
+        }
+
+        .highlight { color: var(--accent-green); }
+        .tag {
+            background: rgba(255,255,255,0.1);
+            padding: 2px 6px;
+            border-radius: 4px;
+            font-size: 0.9em;
+            margin-right: 6px;
+            color: var(--accent-cyan);
+            border: 1px solid rgba(255,255,255,0.05);
+            display: inline-block;
+            margin-bottom: 4px;
+        }
+
+        /* Blinking Cursor */
+        .cursor {
+            display: inline-block;
+            width: 9px;
+            height: 16px;
+            background-color: rgba(255, 255, 255, 0.5);
+            border: 1px solid white;
+            animation: blink 1s step-end infinite;
+            vertical-align: text-bottom;
+        }
+
+        @keyframes blink { 0%, 100% { opacity: 1; } 50% { opacity: 0; } }
+
+        /* Modern Dock */
+        .dock-container {
+            position: fixed;
+            bottom: 20px;
+            left: 50%;
+            transform: translateX(-50%);
+            background: rgba(255, 255, 255, 0.1);
+            backdrop-filter: blur(20px) saturate(150%);
+            -webkit-backdrop-filter: blur(20px) saturate(150%);
+            padding: 10px 14px;
+            border-radius: 24px;
+            border: 1px solid rgba(255, 255, 255, 0.2);
+            display: flex;
+            gap: 14px;
+            box-shadow: 0 20px 40px rgba(0,0,0,0.3);
+            z-index: 1000;
+            transition: margin-bottom 0.3s;
+            width: max-content;
+            max-width: 90%;
+            overflow-x: auto;
+            
+            scrollbar-width: none; 
+            -ms-overflow-style: none; 
+        }
+        
+        .dock-container::-webkit-scrollbar { display: none; }
+
+        .dock-icon {
+            width: 52px;
+            height: 52px;
+            border-radius: 14px;
+            background: rgba(0,0,0,0.2);
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            cursor: pointer;
+            transition: all 0.25s cubic-bezier(0.25, 1, 0.5, 1);
+            position: relative;
+            box-shadow: 0 5px 10px rgba(0,0,0,0.2);
+            flex-shrink: 0;
+        }
+
+        .dock-icon:hover {
+            transform: scale(1.15) translateY(-10px);
+            margin: 0 6px;
+            box-shadow: 0 15px 30px rgba(0,0,0,0.3);
+        }
+
+        .dock-icon img {
+            width: 100%;
+            height: 100%;
+            object-fit: cover;
+            border-radius: 14px;
+        }
+
+        .dock-icon .dot {
+            position: absolute;
+            bottom: -16px;
+            width: 5px;
+            height: 5px;
+            background: rgba(255,255,255,0.8);
+            border-radius: 50%;
+            box-shadow: 0 0 4px rgba(255,255,255,0.5);
+        }
+
+        .terminal-icon { 
+            background: linear-gradient(145deg, #3a3a3c, #2c2c2e);
+            border: 1px solid rgba(255,255,255,0.1);
+        }
+
+        .ascii-art {
+            font-size: 11px;
+            line-height: 1.1;
+            color: var(--accent-blue);
+            margin-bottom: 24px;
+            white-space: pre;
+            font-weight: bold;
+            transform-origin: top left;
+        }
+
+        /* Interactive Input Styles */
+        .input-line {
+            display: flex;
+            align-items: center;
+            flex-wrap: wrap;
+        }
+        
+        #command-input {
+            background: transparent;
+            border: none;
+            color: var(--text-primary);
+            font-family: 'SF Mono', 'Menlo', 'Monaco', 'Courier New', monospace;
+            font-size: 13.5px;
+            flex-grow: 1;
+            outline: none;
+            margin-left: 8px;
+            caret-color: var(--accent-green);
+            min-width: 100px;
+        }
+
+        /* Matrix Rain Canvas (Inside Terminal) */
+        #matrix-canvas {
+            position: absolute;
+            top: 44px;
+            left: 0;
+            width: 100%;
+            height: calc(100% - 44px);
+            z-index: 5;
+            pointer-events: none;
+            opacity: 0;
+            transition: opacity 0.5s;
+        }
+        #matrix-canvas.active { opacity: 0.8; }
+
+        /* Car Game Element */
+        #car-game-element {
+            position: fixed;
+            font-size: 2rem;
+            pointer-events: none;
+            z-index: 9999;
+            transition: top 0.1s linear, left 0.1s linear, transform 0.1s linear;
+            display: none;
+        }
+
+        /* Mobile Responsive Queries */
+        @media (max-width: 768px) {
+            #terminal-window {
+                width: 95%; /* Use more width on mobile */
+                height: 70vh; /* Adjust height */
+                top: 5% !important;
+                left: 50% !important;
+                transform: translateX(-50%) !important;
+                margin: 0;
+            }
+            
+            /* Prevent input zoom on iOS */
+            #command-input {
+                font-size: 16px;
+            }
+
+            .ascii-art { 
+                font-size: 5px; /* Smaller ASCII */
+                margin-bottom: 15px;
+            }
+
+            .title { 
+                font-size: 11px; 
+                padding: 0 40px; 
+            }
+
+            .dock-container { 
+                padding: 8px 12px; 
+                bottom: 20px; 
+                gap: 12px; /* Touch friendly gap */
+            }
+
+            .dock-icon { 
+                width: 45px; 
+                height: 45px; 
+            }
+
+            .terminal-body { 
+                font-size: 11px; 
+                padding: 10px 10px; 
+            }
+            
+            .repo-row {
+                display: flex;
+                flex-direction: column;
+                margin-bottom: 10px;
+                border-bottom: 1px solid rgba(255,255,255,0.1);
+                padding-bottom: 5px;
+            }
+            .repo-row span { width: auto !important; display: block !important; margin-bottom: 2px; }
+        }
+    </style>
+</head>
+<body>
+
+    <!-- ======================================================================= -->
+    <!--                          HTML SECTION (index.html)                      -->
+    <!-- ======================================================================= -->
+
+    <!-- Background Animation Canvas -->
+    <canvas id="neural-canvas"></canvas>
+
+    <!-- Terminal Window -->
+    <div id="terminal-window">
+        <div class="title-bar" id="drag-handle">
+            <div class="buttons">
+                <div class="button red" onclick="closeWindow()"><i class="fas fa-times"></i></div>
+                <div class="button yellow" onclick="minimizeWindow()"><i class="fas fa-minus"></i></div>
+                <div class="button green" onclick="toggleMaximize()"><i class="fas fa-expand-alt"></i></div>
+            </div>
+            <div class="title">
+                <i class="fas fa-folder-open"></i> soumyajit — -zsh
+            </div>
+        </div>
+        
+        <!-- Matrix Rain Canvas (Internal) -->
+        <canvas id="matrix-canvas"></canvas>
+
+        <div class="terminal-body" id="terminal-content" onclick="focusInput()">
+            <div class="ascii-art">
+  ____                                       _ _   
+ / ___|  ___  _   _ _ __ ___  _   _  __ _ (_) |_ 
+ \___ \ / _ \| | | | '_ ` _ \| | | |/ _` || | __|
+  ___) | (_) | |_| | | | | | | |_| | (_| || | |_ 
+ |____/ \___/ \__,_|_| |_| |_|\__, |\__,_|/ |\__|
+                              |___/     |__/     
+            </div>
+            <div style="color: var(--text-secondary); margin-bottom: 10px;">Last login: <span id="last-login"></span> on ttys000</div>
+            <div class="command-line">
+                <span class="prompt">soumyajit@macbook-pro</span> <span class="path">~ %</span> <span class="command">./portfolio.sh --mode=interactive</span>
+            </div>
+            
+            <div id="script-output">
+                <!-- Content will be typed here via JS -->
+            </div>
+            
+            <div class="command-line hidden input-line" id="final-prompt">
+                 <span class="prompt">guest@macbook-pro</span> <span class="path">~ %</span> 
+                 <input type="text" id="command-input" autocomplete="off" spellcheck="false" enterkeyhint="go">
+            </div>
+        </div>
+    </div>
+
+    <!-- Modern Mac OS Dock -->
+    <div class="dock-container">
+        <div class="dock-icon terminal-icon" onclick="restoreWindow()" title="Terminal">
+            <div style="color:white; font-family: monospace; font-weight:bold; font-size:22px; margin-top: -2px;">&gt;_</div>
+            <div class="dot"></div>
+        </div>
+        <div class="dock-icon" title="Github" onclick="window.open('https://github.com/Som-0619', '_blank')">
+            <img src="https://upload.wikimedia.org/wikipedia/commons/c/c2/GitHub_Invertocat_Logo.svg" alt="Github" style="filter: invert(1);">
+        </div>
+        <div class="dock-icon" title="Mail" onclick="window.location.href='mailto:soumyajithazrawork@gmail.com'">
+            <img src="https://upload.wikimedia.org/wikipedia/commons/4/4e/Mail_%28iOS%29.svg" alt="Mail">
+        </div>
+        <div class="dock-icon" title="LinkedIn" onclick="window.open('https://www.linkedin.com/in/soumyajithazra/', '_blank')">
+            <img src="https://upload.wikimedia.org/wikipedia/commons/8/81/LinkedIn_icon.svg" alt="LinkedIn">
+        </div>
+    </div>
+
+    <!-- Car Game Element -->
+    <div id="car-game-element">🚗</div>
+
+    <!-- ======================================================================= -->
+    <!--                       JAVASCRIPT SECTION (script.js)                    -->
+    <!-- ======================================================================= -->
+    <script>
+        // --- Neural Network Background Animation Logic ---
+        const neuralCanvas = document.getElementById('neural-canvas');
+        const nCtx = neuralCanvas.getContext('2d');
+        let nParticles = [];
+        const nConfig = {
+            particleCount: 100, // Increased count slightly
+            lineDistance: 150,
+            mouseDistance: 200,
+            particleSpeed: 0.5
+        };
+
+        // Mouse Tracker for Network Effect
+        let nMouse = { x: null, y: null };
+
+        function initNeuralNetwork() {
+            // 1. Set sizing first
+            resizeNeuralCanvas();
+            
+            // 2. Create particles immediately
+            createParticles();
+
+            // 3. Listen for resize. IMPORTANT: Re-create particles on resize to ensure
+            // they cover the new area and don't get stuck in a corner if the window expands.
+            window.addEventListener('resize', () => {
+                resizeNeuralCanvas();
+                createParticles();
+            });
+
+            window.addEventListener('mousemove', (e) => {
+                nMouse.x = e.x;
+                nMouse.y = e.y;
+            });
+            
+            // Touch support for Neural Network
+            window.addEventListener('touchmove', (e) => {
+                if(e.touches.length > 0) {
+                    nMouse.x = e.touches[0].clientX;
+                    nMouse.y = e.touches[0].clientY;
+                }
+            });
+            window.addEventListener('touchstart', (e) => {
+                if(e.touches.length > 0) {
+                    nMouse.x = e.touches[0].clientX;
+                    nMouse.y = e.touches[0].clientY;
+                }
+            });
+            
+            animateNeuralNetwork();
+        }
+
+        function createParticles() {
+            nParticles = [];
+            // Calculate a reasonable number of particles based on screen area, 
+            // ensuring it's not too sparse on huge screens or too dense on mobile.
+            const area = neuralCanvas.width * neuralCanvas.height;
+            const density = 0.00008; // Particles per pixel squared roughly
+            const calcCount = Math.floor(area * density);
+            const count = Math.max(50, Math.min(calcCount, 150)); // Clamp between 50 and 150
+
+            for (let i = 0; i < count; i++) {
+                nParticles.push({
+                    x: Math.random() * neuralCanvas.width,
+                    y: Math.random() * neuralCanvas.height,
+                    vx: (Math.random() - 0.5) * nConfig.particleSpeed,
+                    vy: (Math.random() - 0.5) * nConfig.particleSpeed,
+                    size: Math.random() * 2 + 1
+                });
+            }
+        }
+
+        function resizeNeuralCanvas() {
+            neuralCanvas.width = window.innerWidth;
+            neuralCanvas.height = window.innerHeight;
+        }
+
+        function animateNeuralNetwork() {
+            nCtx.clearRect(0, 0, neuralCanvas.width, neuralCanvas.height);
+            
+            // Update and Draw Particles
+            for (let i = 0; i < nParticles.length; i++) {
+                let p = nParticles[i];
+                
+                // Move
+                p.x += p.vx;
+                p.y += p.vy;
+
+                // Bounce off edges
+                if (p.x < 0 || p.x > neuralCanvas.width) p.vx *= -1;
+                if (p.y < 0 || p.y > neuralCanvas.height) p.vy *= -1;
+
+                // Draw Particle
+                nCtx.beginPath();
+                nCtx.arc(p.x, p.y, p.size, 0, Math.PI * 2);
+                nCtx.fillStyle = 'rgba(100, 210, 255, 0.5)'; // Cyan-ish
+                nCtx.fill();
+
+                // Connect to Mouse
+                if (nMouse.x != null) {
+                    let dx = nMouse.x - p.x;
+                    let dy = nMouse.y - p.y;
+                    let distance = Math.sqrt(dx*dx + dy*dy);
+                    if (distance < nConfig.mouseDistance) {
+                        nCtx.beginPath();
+                        nCtx.strokeStyle = `rgba(100, 210, 255, ${1 - distance/nConfig.mouseDistance})`;
+                        nCtx.lineWidth = 1;
+                        nCtx.moveTo(p.x, p.y);
+                        nCtx.lineTo(nMouse.x, nMouse.y);
+                        nCtx.stroke();
+                    }
+                }
+
+                // Connect to other particles
+                for (let j = i; j < nParticles.length; j++) {
+                    let p2 = nParticles[j];
+                    let dx = p.x - p2.x;
+                    let dy = p.y - p2.y;
+                    let distance = Math.sqrt(dx*dx + dy*dy);
+
+                    if (distance < nConfig.lineDistance) {
+                        nCtx.beginPath();
+                        nCtx.strokeStyle = `rgba(100, 210, 255, ${0.15 * (1 - distance/nConfig.lineDistance)})`;
+                        nCtx.lineWidth = 1;
+                        nCtx.moveTo(p.x, p.y);
+                        nCtx.lineTo(p2.x, p2.y);
+                        nCtx.stroke();
+                    }
+                }
+            }
+            requestAnimationFrame(animateNeuralNetwork);
+        }
+        
+        // Start Background
+        initNeuralNetwork();
+
+
+        // --- Portfolio & Terminal Logic (Original) ---
+        const date = new Date();
+        document.getElementById('last-login').innerText = date.toString().slice(0, 24);
+
+        const terminal = document.getElementById('terminal-window');
+        const outputDiv = document.getElementById('script-output');
+        const finalPrompt = document.getElementById('final-prompt');
+
+        // Data object
+        const portfolioData = {
+            header: "Initializing Portfolio Module v3.0 (Tahoe Build)...",
+            profile: {
+                name: "Soumyajit Hazra",
+                role: "Data Scientist , AIML Engineer , Software Developer , Researcher , Open Source Contributor, DevOps Enthusiast",
+                tagline: "Building intelligent systems & scalable solutions."
+            },
+            certifications: [
+                { name: "Docker Professional Certificate", issuer: "Docker Inc", icon: "" },
+                { name: "Neo4j Professional Certified Data Scientist", issuer: "Neo4j Academy", icon: "" },
+                { name: "Azure Ai Essentials Professional", issuer: "Microsoft", icon: "" },
+                { name: "Neo4j Professional Certified", issuer: "Neo4j Academy", icon: "" },
+                { name: "Mastering Gen AI and ChatGPT", issuer: "GeekforGeeks", icon: "" },
+                { name: "OCI Generative AI Certified", issuer: "Oracle", icon: "" },
+                { name: "Prompt Engineering Essentials", issuer: "Google", icon: "" },
+                { name: "MongoDB Developer's Toolkit", issuer: "MongoDB", icon: "" },
+                { name: "CyberSecurity Fundamentals", issuer: "Palo Alto", icon: "" }
+            ],
+            experience: [
+                {
+                    role: "Data Science Intern",
+                    company: "Amilo Ai Pvt Ltd",
+                    details: [
+                        "Contributed to developing containerized backend services, supporting reliable deployments and improving development efficiency.",
+                        "Worked with distributed systems and cloud platforms, debugging API workflows and ensuring system stability.",
+                        "Gained hands-on exposure to version control, code reviews, and collaborative development workflows in a remote engineering environment."
+                    ]
+                }
+            ],
+            projects: [
+                {
+                    name: "VerveFest",
+                    tech: "Full-stack, CMS, AI Integration",
+                    desc: "Developed a full-stack web application with CMS backend and integrated AI components for content enhancements."
+                },
+                {
+                    name: "Campus Fix",
+                    tech: "Android, Kotlin, Firebase",
+                    desc: "Mobile app for campus infrastructure reporting with automated routing and real-time tracking."
+                },
+                {
+                    name: "AI-Driven Talent Repository",
+                    tech: "Python, NLP, MongoDB",
+                    desc: "AI-powered platform for students to showcase projects with NLP models for classification and ranking."
+                },
+                {
+                    name: "Small LLM Fine-Tuning using DistilGPT-2",
+                    tech: "Python, HuggingFace, Transformers",
+                    desc: "Fine-tuned DistilGPT-2 on custom datasets for domain-specific text generation tasks."
+                },
+                {
+                    name: "Sentiment Analysis on Social Media",
+                    tech: "Python, NLP, Transformers",
+                    desc: "Developed sentiment analysis models using transformer architectures to analyze social media trends."
+                },
+                {
+                    name: "Image Classification with CNNs",
+                    tech: "Python, TensorFlow, Keras",
+                    desc: "Built convolutional neural networks for image classification tasks achieving high accuracy on benchmark datasets."
+                },
+                {
+                    name: "Prediction Models (House Prices, Stock Prices)",
+                    tech: "Python, Machine Learning Algorithms",
+                    desc: "Built prediction models using regression techniques to forecast house prices and stock market trends."
+                }
+
+            ],
+            skillsCategories: {
+                "Languages": ["Python", "JavaScript", "HTML/CSS"],
+                "Data & ML": ["Pandas", "NumPy", "Scikit-learn", "TensorFlow", "PyTorch", "NLP", "Transformers"],
+                "Analytics Tools": ["Excel", "Tableau", "Power BI", "Matplotlib", "Seaborn"],
+                "Developer Tools": ["GitHub", "VS Code", "Jupyter", "GCP", "Firebase"],
+                "Backend / Cloud": ["Flask", "FastAPI", "REST APIs", "AWS", "Kubernetes"]
+            },
+            skills: ["Python", "TensorFlow", "PyTorch", "NLP", "GenAI", "Neo4j", "SQL", "Flask"]
+        };
+
+        const fileSystem = {
+            "about.txt": "Soumyajit Hazra\nBachelor of Engineering in Computer Science [Data Science]\nAtria Institute of Technology\n\nAspiring Engineer with a solid foundation in Python, Machine learning, Deep learning, and AI.",
+            "resume_text.txt": "EDUCATION\nAtria Institute of Technology - B.E. in CS [Data Science]\n...",
+            "contact.md": "Email: soumyajithazrawork@gmail.com\nLinkedIn: linkedin.com/in/soumyajithazra",
+            "projects": "Directory: [VerveFest] [Campus_Fix] [AI_Talent_Repository]",
+            "secrets.txt": "Permission denied. Try 'sudo cat secrets.txt'"
+        };
+
+        async function typeContent() {
+            await typeLine(`<span class="highlight">${portfolioData.header}</span>`, 5);
+            await delay(200);
+            await typeLine(`Identity Verified: <span style="color:white; font-weight:bold;">${portfolioData.profile.name}</span> [${portfolioData.profile.role}]`, 5);
+            await typeLine(`<span style="color: var(--accent-yellow)">"${portfolioData.profile.tagline}"</span>`, 5);
+            await typeLine("<br>", 0);
+
+            await typeLine(`<div class="section-title">🧑‍💼 Experience</div>`, 0);
+            for (const exp of portfolioData.experience) {
+                let html = `<div><span class="item-title">${exp.role}</span> <span style="color:#666">@</span> <span style="color:#fff">${exp.company}</span></div>`;
+                for (const detail of exp.details) { html += `<div class="bullet-point">${detail}</div>`; }
+                html += `<div style="height:8px"></div>`; 
+                await typeLine(html, 2);
+                await delay(50);
+            }
+
+            await typeLine(`<div class="section-title">🚀 Projects & ML Implementations</div>`, 0);
+            for (const proj of portfolioData.projects) {
+                let html = `<div><span class="item-title">${proj.name}</span> <span class="tag">${proj.tech}</span></div>`;
+                html += `<div class="bullet-point" style="margin-bottom:12px">${proj.desc}</div>`;
+                await typeLine(html, 2);
+                await delay(50);
+            }
+
+            await typeLine(`<div class="section-title">📜 Certified & Verified</div>`, 0);
+            let certHtml = "<div style='display: grid; grid-template-columns: repeat(auto-fill, minmax(250px, 1fr)); gap: 12px;'>";
+            for (const cert of portfolioData.certifications) {
+                certHtml += `<div style="background:rgba(255,255,255,0.05); padding:8px; border-radius:6px; border:1px solid rgba(255,255,255,0.05);"><div style="font-size:1.1em; margin-bottom:4px;">${cert.icon} <span style="color:white;">${cert.name}</span></div><div style="color:var(--text-secondary); font-size:0.85em;">${cert.issuer}</div></div>`;
+            }
+            certHtml += "</div><br>";
+            await typeLine(certHtml, 0);
+
+            await typeLine(`<div class="section-title">🛠 Technical Stack</div>`, 0);
+            const skillString = portfolioData.skills.map(s => `<span class="tag">${s}</span>`).join(" ");
+            await typeLine(skillString + "<br><br>", 0);
+
+            await typeLine(`<span class="highlight">✔ System ready. Type 'help' for commands.</span>`, 10);
+            
+            finalPrompt.classList.remove('hidden');
+            document.getElementById('command-input').focus();
+            scrollToBottom();
+        }
+
+        function typeLine(html, speed) {
+            return new Promise(resolve => {
+                const div = document.createElement('div');
+                div.innerHTML = html;
+                div.style.opacity = 0;
+                div.style.transform = "translateY(5px)";
+                div.style.transition = "opacity 0.3s, transform 0.3s";
+                outputDiv.appendChild(div);
+                requestAnimationFrame(() => { div.style.opacity = 1; div.style.transform = "translateY(0)"; });
+                scrollToBottom();
+                if (speed === 0) resolve(); else setTimeout(resolve, speed);
+            });
+        }
+
+        function delay(ms) { return new Promise(resolve => setTimeout(resolve, ms)); }
+
+        function scrollToBottom() {
+            const body = document.getElementById('terminal-content');
+            body.scrollTop = body.scrollHeight;
+        }
+
+        const inputField = document.getElementById('command-input');
+        function focusInput() { if (!window.getSelection().toString()) inputField.focus(); }
+
+        inputField.addEventListener('keydown', function(e) {
+            if (e.key === 'Enter') {
+                const command = this.value.trim();
+                const promptHtml = `<div class="command-line"><span class="prompt">guest@macbook-pro</span> <span class="path">~ %</span> <span class="command">${command}</span></div>`;
+                outputDiv.insertAdjacentHTML('beforeend', promptHtml);
+                processCommand(command);
+                this.value = '';
+                scrollToBottom();
+            }
+        });
+
+        function processCommand(cmd) {
+            const args = cmd.split(' ');
+            const mainCmd = args[0].toLowerCase();
+            let response = '';
+
+            switch(mainCmd) {
+                case 'help':
+                    response = `<div style="color: var(--accent-cyan)">Available Commands:</div>
+                        <div class="bullet-point"><span class="highlight">ls</span> - List files and directories</div>
+                        <div class="bullet-point"><span class="highlight">aboutsom</span> - Display profile object</div>
+                        <div class="bullet-point"><span class="highlight">skills</span> - View technical proficiency</div>
+                        <div class="bullet-point"><span class="highlight">repo</span> - List project repositories</div>
+                        <div class="bullet-point"><span class="highlight">pip install resume</span> - Download Resume (Dev Mode)</div>
+                        <div class="bullet-point"><span class="highlight">game</span> - Toggle Car Chaser Game</div>
+                        <div class="bullet-point"><span class="highlight">whoami</span> - Display current user</div>
+                        <div class="bullet-point"><span class="highlight">clear</span> - Clear terminal output</div>
+                        <div class="bullet-point"><span class="highlight">matrix</span> - Toggle Matrix rain effect</div>`;
+                    break;
+                case 'pip':
+                    if (args[1] === 'install' && args[2] === 'resume') {
+                        const link = document.createElement('a');
+                        link.href = 'Soumyajit-Hazra_CV.pdf'; 
+                        link.download = 'Soumyajit-Hazra_CV.pdf';
+                        document.body.appendChild(link);
+                        link.click();
+                        document.body.removeChild(link);
+                        response = `<span style="color: var(--text-primary)">Collecting resume...</span><br><span style="color: var(--text-secondary)">Downloading Som-Resume.pdf (100%)</span><br><span style="color: var(--accent-green)">Successfully installed resume-2025.1.0</span>`;
+                    } else { response = `<span style="color: var(--accent-red)">Command not found. Did you mean 'pip install resume'?</span>`; }
+                    break;
+                case 'ls':
+                    response = Object.keys(fileSystem).map(f => `<span style="margin-right:15px; color:${f.includes('.') ? 'var(--text-primary)' : 'var(--accent-blue)'}">${f}</span>`).join('');
+                    break;
+                case 'skills':
+                    let skillOutput = '<div style="font-family: monospace;"><div style="color: var(--accent-yellow); margin-bottom:5px;">--- TECH STACK INVENTORY ---</div>';
+                    for (const [category, tools] of Object.entries(portfolioData.skillsCategories)) {
+                        skillOutput += `<div style="margin-top: 10px;"><span style="color: var(--accent-cyan); font-weight:bold; display:block; margin-bottom:2px;">${category}:</span><div style="margin-left: 10px; line-height: 1.4;">${tools.map(tool => `<span class="tag">${tool}</span>`).join(' ')}</div></div>`;
+                    }
+                    response = skillOutput + '</div>';
+                    break;
+                case 'repo':
+                    const repos = [
+                        { name: "small-llm-finetune", stars: 45, lang: "PyTorch", status: "Public" },
+                        { name: "ml-predict-models", stars: 38, lang: "Python/Sklearn", status: "Public" },
+                        { name: "hand-gesture-recog", stars: 32, lang: "OpenCV", status: "Public" },
+                        { name: "ai-talent-repository", stars: 18, lang: "Python", status: "Public" },
+                        { name: "weather-app-live", stars: 24, lang: "JavaScript", status: "Public" },
+                        { name: "vervefest-cms", stars: 15, lang: "React", status: "Private" },
+                        { name: "campus-fix-android", stars: 24, lang: "Kotlin", status: "Public" },
+                        { name: "hangman-cli", stars: 12, lang: "Python", status: "Public" },
+                        { name: "tic-tac-toe-game", stars: 9, lang: "Python", status: "Public" }
+                    ];
+                    let repoOutput = '<div style="font-family: monospace;"><div class="repo-header" style="color: var(--text-secondary); border-bottom: 1px dashed #444; margin-bottom:5px;"><span style="display:inline-block; width: 40%;">REPO</span><span style="display:inline-block; width: 30%;">LANG</span><span style="display:inline-block; width: 20%;">STARS</span></div>';
+                    repos.forEach(repo => {
+                        repoOutput += `<div class="repo-row" style="margin-bottom: 4px;"><span style="color: var(--accent-blue); display:inline-block; width: 40%;">${repo.name}</span><span style="color: var(--accent-yellow); display:inline-block; width: 30%;">${repo.lang}</span><span style="color: var(--accent-green); display:inline-block; width: 20%;">★ ${repo.stars}</span></div>`;
+                    });
+                    response = repoOutput + '</div>';
+                    break;
+                case 'download_cv':
+                    const cvLink = document.createElement('a');
+                    cvLink.href = 'Som-Resume.pdf'; 
+                    cvLink.download = 'Som-Resume.pdf';
+                    document.body.appendChild(cvLink);
+                    cvLink.click();
+                    document.body.removeChild(cvLink);
+                    response = '<span style="color: var(--accent-green)">Initiating download protocol for Som-Resume.pdf...</span>';
+                    break;
+                case 'vim':
+                    outputDiv.innerHTML = ''; 
+                    response = `<div id="vim-screen" style="height: 100%; width: 100%; display: flex; flex-direction: column; color: #ccc;"><div style="flex-grow: 1;">${Array(10).fill('~').map(l => `<div style="color: var(--accent-blue)">${l}</div>`).join('')}<div style="margin-top: 20px; color: var(--accent-yellow)">"portfolio.txt" [Read Only]</div></div><div style="background: #333; color: white; padding: 2px;">-- NORMAL --</div><div style="color: var(--accent-red); margin-top: 5px;">E37: No write since last change (add ! to override)</div><div style="margin-top: 5px;">Type <span style="color:white; background: #555; padding: 2px;">:q!</span> to exit.</div></div>`;
+                    break;
+                case 'aboutsom':
+                    response = `<div style="font-family: 'SF Mono', monospace; line-height: 1.6; font-size: 0.9em;"><div><span style="color: var(--accent-red)">class</span> <span style="color: var(--accent-yellow)">Soumyajit</span>:</div><div style="padding-left: 15px;"><span style="color: var(--accent-purple)">def</span> <span style="color: var(--accent-blue)">__init__</span>(<span style="color: var(--accent-cyan)">self</span>):</div><div style="padding-left: 30px;"><span style="color: var(--accent-cyan)">self</span>.name = <span style="color: var(--accent-green)">"Soumyajit Hazra"</span></div><div style="padding-left: 30px;"><span style="color: var(--accent-cyan)">self</span>.location = <span style="color: var(--accent-green)">"Bengaluru, India"</span></div><div style="padding-left: 30px;"><span style="color: var(--accent-cyan)">self</span>.education = <span style="color: var(--accent-green)">"B.E. in CSE (Data Science)"</span></div><div style="padding-left: 30px;"><span style="color: var(--accent-cyan)">self</span>.interests = [<span style="color: var(--accent-green)">"Machine Learning"</span>, <span style="color: var(--accent-green)">"AI"</span>, <span style="color: var(--accent-green)">"Cloud"</span>, <span style="color: var(--accent-green)">"Development"</span>, <span style="color: var(--accent-green)">"Gamer"</span>]</div><div style="padding-left: 30px;"><span style="color: var(--accent-cyan)">self</span>.motivation = <span style="color: var(--accent-green)">"Your the last man standing finish it - Call of Duty"</span></div></div>`;
+                    break;
+                case 'game':
+                    toggleGame();
+                    response = isGameActive ? "Game ON: A small car is following your mouse!" : "Game OFF.";
+                    break;
+                case 'whoami': response = "guest (visiting Soumyajit's Portfolio)"; break;
+                case 'date': response = new Date().toString(); break;
+                case 'clear': outputDiv.innerHTML = ''; return;
+                case 'matrix': toggleMatrix(); response = "Matrix mode toggled."; break;
+                case '': break;
+                default: response = `<span style="color: var(--accent-red)">zsh: command not found: ${mainCmd}</span>`;
+            }
+            if (response) outputDiv.insertAdjacentHTML('beforeend', `<div>${response}</div><br>`);
+        }
+
+        // --- Matrix Effect (Terminal Internal) ---
+        const matrixCanvas = document.getElementById('matrix-canvas');
+        const mCtx = matrixCanvas.getContext('2d');
+        let matrixInterval;
+        let isMatrixActive = false;
+        function toggleMatrix() {
+            isMatrixActive = !isMatrixActive;
+            if (isMatrixActive) { matrixCanvas.classList.add('active'); startMatrix(); } 
+            else { matrixCanvas.classList.remove('active'); clearInterval(matrixInterval); mCtx.clearRect(0, 0, matrixCanvas.width, matrixCanvas.height); }
+        }
+        function startMatrix() {
+            matrixCanvas.width = terminal.clientWidth;
+            matrixCanvas.height = terminal.clientHeight - 44; 
+            const chars = 'アァカサタナハマヤャラワガザダバパイィキシチニヒミリABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789';
+            const fontSize = 14;
+            const columns = matrixCanvas.width / fontSize;
+            const drops = Array(Math.floor(columns)).fill(1);
+            matrixInterval = setInterval(() => {
+                mCtx.fillStyle = 'rgba(0, 0, 0, 0.05)';
+                mCtx.fillRect(0, 0, matrixCanvas.width, matrixCanvas.height);
+                mCtx.fillStyle = '#0F0';
+                mCtx.font = fontSize + 'px monospace';
+                for (let i = 0; i < drops.length; i++) {
+                    const text = chars.charAt(Math.floor(Math.random() * chars.length));
+                    mCtx.fillText(text, i * fontSize, drops[i] * fontSize);
+                    if (drops[i] * fontSize > matrixCanvas.height && Math.random() > 0.975) drops[i] = 0;
+                    drops[i]++;
+                }
+            }, 30);
+        }
+
+        // --- Car Game ---
+        const carElement = document.getElementById('car-game-element');
+        let isGameActive = false;
+        let mouseX = window.innerWidth / 2, mouseY = window.innerHeight / 2;
+        let carX = mouseX, carY = mouseY, carAngle = 0;
+        const carSpeed = 0.05;
+        function toggleGame() {
+            isGameActive = !isGameActive;
+            carElement.style.display = isGameActive ? 'block' : 'none';
+            if (isGameActive) gameLoop();
+        }
+        document.addEventListener('mousemove', (e) => {
+            if (isGameActive) { mouseX = e.clientX; mouseY = e.clientY; }
+        });
+        
+        // Touch support for car game
+        document.addEventListener('touchmove', (e) => {
+            if (isGameActive && e.touches.length > 0) {
+                mouseX = e.touches[0].clientX;
+                mouseY = e.touches[0].clientY;
+            }
+        });
+        
+        function gameLoop() {
+            if (!isGameActive) return;
+            const dx = mouseX - carX;
+            const dy = mouseY - carY;
+            carX += dx * carSpeed;
+            carY += dy * carSpeed;
+            if (Math.abs(dx) > 1 || Math.abs(dy) > 1) carAngle = Math.atan2(dy, dx) * 180 / Math.PI;
+            let scaleX = dx < 0 ? -1 : 1;
+            carElement.style.left = (carX - 20) + 'px';
+            carElement.style.top = (carY - 20) + 'px';
+            carElement.style.transform = `scaleX(${scaleX})`;
+            requestAnimationFrame(gameLoop);
+        }
+
+        // --- Window Controls ---
+        let isMaximized = false, isMinimized = false, isClosed = false;
+        function closeWindow() { terminal.classList.add('closed'); isClosed = true; }
+        function minimizeWindow() { if(isMaximized) toggleMaximize(); terminal.classList.add('minimized'); isMinimized = true; }
+        function toggleMaximize() { if (isMinimized) return; terminal.classList.toggle('maximized'); isMaximized = !isMaximized; }
+        function restoreWindow() {
+            if (isClosed) { terminal.classList.remove('closed'); isClosed = false; }
+            if (isMinimized) { terminal.classList.remove('minimized'); isMinimized = false; }
+        }
+
+        window.onload = () => { setTimeout(typeContent, 600); };
+
+        // --- Drag Logic ---
+        const dragHandle = document.getElementById('drag-handle');
+        let isDragging = false;
+        let startX, startY, initialLeft, initialTop;
+        dragHandle.addEventListener('mousedown', (e) => {
+            if (isMaximized || window.innerWidth <= 768) return; 
+            isDragging = true;
+            startX = e.clientX;
+            startY = e.clientY;
+            const rect = terminal.getBoundingClientRect();
+            initialLeft = rect.left;
+            initialTop = rect.top;
+            terminal.style.transition = 'none';
+        });
+        document.addEventListener('mousemove', (e) => {
+            if (!isDragging) return;
+            const dx = e.clientX - startX;
+            const dy = e.clientY - startY;
+            terminal.style.position = 'absolute';
+            terminal.style.left = `${initialLeft + dx}px`;
+            terminal.style.top = `${initialTop + dy}px`;
+            terminal.style.transform = 'none';
+        });
+        document.addEventListener('mouseup', () => {
+            if(isDragging) {
+                isDragging = false;
+                terminal.style.transition = 'all 0.5s cubic-bezier(0.19, 1, 0.22, 1)';
+            }
+        });
+    </script>
+</body>
+</html>
